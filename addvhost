@@ -1,0 +1,62 @@
+#!/bin/bash
+NGINX_CONFIG='/etc/nginx/sites-available'
+NGINX_SITES_ENABLED='/etc/nginx/sites-enabled'
+WEB_DIR='/var/www'
+SED=`which sed`
+CURRENT_DIR=`dirname $0`
+ 
+if [ -z $1 ]; then
+	echo "No domain name given"
+	exit 1
+fi
+DOMAIN=$1
+ 
+# check the domain is roughly valid!
+PATTERN="^([[:alnum:]]([[:alnum:]\-]{0,61}[[:alnum:]])?\.)+[[:alpha:]]{2,6}$"
+if [[ "$DOMAIN" =~ $PATTERN ]]; then
+	DOMAIN=`echo $DOMAIN | tr '[A-Z]' '[a-z]'`
+	echo "Creating hosting for:" $DOMAIN
+else
+	echo "invalid domain name"
+	exit 1
+fi
+
+ 
+# Add user
+useradd -g www-users -d $WEB_DIR/$DOMAIN $DOMAIN
+
+# Now we need to copy the virtual host template
+CONFIG=$NGINX_CONFIG/$DOMAIN.conf
+sudo cp $CURRENT_DIR/vhost_template $CONFIG
+sudo $SED -i "s/DOMAIN/$DOMAIN/g" $CONFIG
+sudo $SED -i "s!ROOT!$WEB_DIR/$SITE_DIR!g" $CONFIG
+ 
+# set up web root
+sudo mkdir $WEB_DIR/$DOMAIN
+sudo mkdir $WEB_DIR/$DOMAIN/public
+sudo mkdir $WEB_DIR/$DOMAIN/logs
+
+sudo chown $DOMAIN:www-users -R $WEB_DIR/$DOMAIN
+sudo chmod 600 $CONFIG
+ 
+# create symlink to enable site
+sudo ln -s $CONFIG $NGINX_SITES_ENABLED/$DOMAIN.conf
+ 
+# reload Nginx to pull in new config
+sudo /etc/init.d/nginx reload
+ 
+# put the template index.html file into the new domains web dir
+sudo cp $CURRENT_DIR/index.php $WEB_DIR/$DOMAIN/public/index.php
+sudo chown $DOMAIN:www-users $WEB_DIR/$DOMAIN/public/index.php
+
+# symlink phpmyadmin
+#sudo ln -s /usr/share/phpmyadmin/ /$WEB_DIR/$DOMAIN/public
+
+# Copy the socket file
+cp $CURRENT_DIR/socket-template /etc/php5/fpm/pool.d/$DOMAIN.conf
+sudo $SED -i "s/DOMAIN/$DOMAIN/g" /etc/php5/fpm/pool.d/$DOMAIN.conf
+ 
+# Restart php5-fpm
+sudo service php5-fpm restart
+
+echo "Site Created for $DOMAIN"
