@@ -11,11 +11,8 @@ server {
     error_log /var/www/DOMAIN/logs/error.log;
 
     location / {
-        # First attempt to serve request as file, then
-        # as directory, then fall back to index.html
+        # Send all requests to index.php
         try_files $uri $uri/ /index.php?$query_string;
-        # Uncomment to enable naxsi on this location
-        # include /etc/nginx/naxsi.rules
     }
 
     # Add caching to static files
@@ -24,6 +21,15 @@ server {
         add_header Pragma public;
         add_header Cache-Control "public";
     }
+
+    # Enable GZIP for static files
+    gzip            on;
+    gzip_min_length 1000;
+    gzip_buffers  4 32k;
+    gzip_proxied    any;
+    gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml text/js application/javascript;
+
+
 
     # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
     location ~ \.php$ {
