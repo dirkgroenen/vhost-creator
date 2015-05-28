@@ -29,7 +29,28 @@ server {
     gzip_proxied    any;
     gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml text/js application/javascript;
 
+    #Cache everything by default
+	set $no_cache 0;
 
+	# Only cache GET requests
+	if ($request_method != GET){
+	    set $no_cache 1;
+	}
+
+	#Don't cache if the URL contains a query string
+	if ($query_string != ""){
+	    set $no_cache 1;
+	}
+
+	#Don't cache the following URLs
+	if ($request_uri ~* "/(wp-login.php|wp-admin|login.php|backend|admin)"){
+	    set $no_cache 1;
+	}
+
+	#Don't cache if there is a cookie called PHPSESSID
+	if ($http_cookie = "PHPSESSID"){
+	    set $no_cache 1;
+	}
 
     # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
     location ~ \.php$ {
@@ -44,6 +65,9 @@ server {
         fastcgi_pass_header Set-Cookie;
         fastcgi_pass_header Cookie;
         fastcgi_ignore_headers Cache-Control Expires Set-Cookie;
+
+        fastcgi_cache_bypass $no_cache;
+		fastcgi_no_cache $no_cache;
 
         fastcgi_pass            unix:/var/run/php5-fpm/DOMAIN.socket;
         fastcgi_index           index.php;
