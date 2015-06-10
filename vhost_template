@@ -47,10 +47,10 @@ server {
 	    set $no_cache 1;
 	}
 
-	#Don't cache if there is a cookie called PHPSESSID
-	if ($http_cookie = "PHPSESSID"){
-	    set $no_cache 1;
-	}
+	#Don't cache if there is a cookie called wordpress_logged_in_[hash]
+    if ($http_cookie ~* "wordpress_logged_in_"){
+        set $no_cache 1;
+    }
 
     # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
     location ~ \.php$ {
